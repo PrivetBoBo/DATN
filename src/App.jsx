@@ -3,7 +3,7 @@ import * as tf from "@tensorflow/tfjs";
 import "@tensorflow/tfjs-backend-webgl"; // set backend to webgl
 import Loader from "./components/loader";
 import ButtonHandler from "./components/btn-handler";
-import { detect, detectVideo } from "./utils/detect";
+import { detect } from "./utils/detect";
 import "./style/App.css";
 
 const App = () => {
@@ -15,17 +15,13 @@ const App = () => {
 
   // references
   const imageRef = useRef(null);
-  const cameraRef = useRef(null);
-  const videoRef = useRef(null);
   const canvasRef = useRef(null);
-
-  // model configs
-  const modelName = "yolov8n";
+    // model configs
+  const modelName = "Sử dụng model YOLOv8 để nhận diện tôm";
 
   useEffect(() => {
     tf.ready().then(async () => {
-      const yolov8 = await tf.loadGraphModel(
-        `${window.location.href}/${modelName}_web_model/model.json`,
+      const model = await tf.loadGraphModel("./public/models/model.json",
         {
           onProgress: (fractions) => {
             setLoading({ loading: true, progress: fractions }); // set loading fractions
@@ -34,54 +30,46 @@ const App = () => {
       ); // load model
 
       // warming up model
-      const dummyInput = tf.ones(yolov8.inputs[0].shape);
-      const warmupResults = yolov8.execute(dummyInput);
+      const dummyInput = tf.ones(model.inputs[0].shape);
+      const warmupResults = model.execute(dummyInput);
 
       setLoading({ loading: false, progress: 1 });
       setModel({
-        net: yolov8,
-        inputShape: yolov8.inputs[0].shape,
+        net: model,
+        inputShape: model.inputs[0].shape,
       }); // set model & input shape
 
       tf.dispose([warmupResults, dummyInput]); // cleanup memory
     });
   }, []);
+  
+
 
   return (
     <div className="App">
-      {loading.loading && <Loader>Loading model... {(loading.progress * 100).toFixed(2)}%</Loader>}
+      <div className="upload_image"></div>
+      {loading.loading && <Loader>Loading model.Json...</Loader>}
       <div className="header">
-        <h1>📷 YOLOv8 Live Detection App</h1>
+        <h1>Hệ thống nhận diện tôm</h1>
         <p>
-          YOLOv8 live detection application on browser powered by <code>tensorflow.js</code>
+          website : <code className="code">{modelName}</code>
         </p>
-        <p>
-          Serving : <code className="code">{modelName}</code>
-        </p>
+        <div className="button_place">
+          <ButtonHandler imageRef={imageRef} />
+        </div>
       </div>
 
-      <div className="content">
-        <img
-          src="#"
-          ref={imageRef}
-          onLoad={() => detect(imageRef.current, model, canvasRef.current)}
-        />
-        <video
-          autoPlay
-          muted
-          ref={cameraRef}
-          onPlay={() => detectVideo(cameraRef.current, model, canvasRef.current)}
-        />
-        <video
-          autoPlay
-          muted
-          ref={videoRef}
-          onPlay={() => detectVideo(videoRef.current, model, canvasRef.current)}
-        />
-        <canvas width={model.inputShape[1]} height={model.inputShape[2]} ref={canvasRef} />
+      <div className="predict_image">
+        <h4 className="name_content">Kết quả dự đoán tôm</h4>
+        <div className="content">
+          <img 
+            src="#"
+            ref={imageRef}
+            onLoad={() => detect(imageRef.current, model, canvasRef.current)}
+          />
+          <canvas width={model.inputShape[1]} height={model.inputShape[2]} ref={canvasRef} />
+        </div>
       </div>
-
-      <ButtonHandler imageRef={imageRef} cameraRef={cameraRef} videoRef={videoRef} />
     </div>
   );
 };

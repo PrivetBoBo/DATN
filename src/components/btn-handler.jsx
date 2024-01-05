@@ -1,111 +1,71 @@
 import { useState, useRef } from "react";
-import { Webcam } from "../utils/webcam";
+import uploadImg from '../../public/upload.png';
 
-const ButtonHandler = ({ imageRef, cameraRef, videoRef }) => {
-  const [streaming, setStreaming] = useState(null); // streaming state
-  const inputImageRef = useRef(null); // video input reference
-  const inputVideoRef = useRef(null); // video input reference
-  const webcam = new Webcam(); // webcam handler
+const ButtonHandler = ({ imageRef}) => {
+  const [image, setImage] = useState(null); 
+  const inputImageRef = useRef(null); 
 
-  // closing image
+  const onDrop = (e) =>{
+    e.preventDefault();
+    const file = e.dataTransfer.files[0]; 
+    if (file) {
+      const url = URL.createObjectURL(file); 
+      imageRef.current.src = url; 
+      imageRef.current.style.display = "block"; 
+      setImage("image");
+    }
+  };
+  const onDragOver = (e) =>{
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+
+  };
+  const onDragLeave = (e) =>{
+    e.preventDefault();
+  };
+
   const closeImage = () => {
     const url = imageRef.current.src;
     imageRef.current.src = "#"; // restore image source
     URL.revokeObjectURL(url); // revoke url
 
-    setStreaming(null); // set streaming to null
+    setImage(null); // set image to null
     inputImageRef.current.value = ""; // reset input image
     imageRef.current.style.display = "none"; // hide image
   };
 
-  // closing video streaming
-  const closeVideo = () => {
-    const url = videoRef.current.src;
-    videoRef.current.src = ""; // restore video source
-    URL.revokeObjectURL(url); // revoke url
-
-    setStreaming(null); // set streaming to null
-    inputVideoRef.current.value = ""; // reset input video
-    videoRef.current.style.display = "none"; // hide video
-  };
-
   return (
-    <div className="btn-container">
-      {/* Image Handler */}
-      <input
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          const url = URL.createObjectURL(e.target.files[0]); // create blob url
-          imageRef.current.src = url; // set video source
-          imageRef.current.style.display = "block"; // show video
-          setStreaming("image"); // set streaming to video
-        }}
-        ref={inputImageRef}
-      />
-      <button
-        onClick={() => {
-          // if not streaming
-          if (streaming === null) inputImageRef.current.click();
-          // closing image streaming
-          else if (streaming === "image") closeImage();
-          else alert(`Can't handle more than 1 stream\nCurrently streaming : ${streaming}`); // if streaming video or webcam
-        }}
-      >
-        {streaming === "image" ? "Close" : "Open"} Image
-      </button>
-
-      {/* Video Handler */}
-      <input
-        type="file"
-        accept="video/*"
-        style={{ display: "none" }}
-        onChange={(e) => {
-          if (streaming === "image") closeImage(); // closing image streaming
-          const url = URL.createObjectURL(e.target.files[0]); // create blob url
-          videoRef.current.src = url; // set video source
-          videoRef.current.addEventListener("ended", () => closeVideo()); // add ended video listener
-          videoRef.current.style.display = "block"; // show video
-          setStreaming("video"); // set streaming to video
-        }}
-        ref={inputVideoRef}
-      />
-      <button
-        onClick={() => {
-          // if not streaming
-          if (streaming === null || streaming === "image") inputVideoRef.current.click();
-          // closing video streaming
-          else if (streaming === "video") closeVideo();
-          else alert(`Can't handle more than 1 stream\nCurrently streaming : ${streaming}`); // if streaming webcam
-        }}
-      >
-        {streaming === "video" ? "Close" : "Open"} Video
-      </button>
-
-      {/* Webcam Handler */}
-      <button
-        onClick={() => {
-          // if not streaming
-          if (streaming === null || streaming === "image") {
-            // closing image streaming
-            if (streaming === "image") closeImage();
-            webcam.open(cameraRef.current); // open webcam
-            cameraRef.current.style.display = "block"; // show camera
-            setStreaming("camera"); // set streaming to camera
-          }
-          // closing video streaming
-          else if (streaming === "camera") {
-            webcam.close(cameraRef.current);
-            cameraRef.current.style.display = "none";
-            setStreaming(null);
-          } else alert(`Can't handle more than 1 stream\nCurrently streaming : ${streaming}`); // if streaming video
-        }}
-      >
-        {streaming === "camera" ? "Close" : "Open"} Webcam
-      </button>
-    </div>
-  );
+    /* Image Handler */
+        <div className="box">
+          <div className="dropzone" onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+            <img src={uploadImg} alt="uploadImg" className="uploadImg"/>
+            <h4>KÉO THẢ ẢNH VÀO ĐÂY</h4>
+            <h4>hoặc</h4>
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const url = URL.createObjectURL(e.target.files[0]); // create blob url
+                imageRef.current.src = url; // set video source
+                imageRef.current.style.display = "block"; // show video
+                setImage("image");
+              }}
+              ref={inputImageRef}
+            />
+            <button
+              onClick={() => {
+                // if not image
+                if (image === null) inputImageRef.current.click();
+                // closing image image
+                else if (image === "image") closeImage();
+              }}
+            >
+              {image === "image" ? "Đóng" : "Tải"} ảnh 
+            </button>
+          </div>
+        </div>
+  );  
 };
 
 export default ButtonHandler;

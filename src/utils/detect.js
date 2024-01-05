@@ -30,7 +30,8 @@ const preprocess = (source, modelWidth, modelHeight) => {
     yRatio = maxSize / h; // update yRatio
 
     return tf.image
-      .resizeBilinear(imgPadded, [modelWidth, modelHeight]) // resize frame
+      .resizeBilinear(imgPadded, [modelWidth, modelHeight])
+      .toFloat() // resize frame
       .div(255.0) // normalize
       .expandDims(0); // add batch
   });
@@ -40,7 +41,7 @@ const preprocess = (source, modelWidth, modelHeight) => {
 
 /**
  * Function run inference and do detection from source.
- * @param {HTMLImageElement|HTMLVideoElement} source
+ * @param {HTMLImageElement} source
  * @param {tf.GraphModel} model loaded YOLOv8 tensorflow.js model
  * @param {HTMLCanvasElement} canvasRef canvas reference
  * @param {VoidFunction} callback function to run after detection process
@@ -70,48 +71,26 @@ export const detect = async (source, model, canvasRef, callback = () => {}) => {
       )
       .squeeze();
   }); // process boxes [y1, x1, y2, x2]
-
+ 
   const [scores, classes] = tf.tidy(() => {
     // class scores
+    // const transRes = res.transpose([0, 2, 1]); //Fix lỗi 3slice
     const rawScores = transRes.slice([0, 0, 4], [-1, -1, numClass]).squeeze(0); // #6 only squeeze axis 0 to handle only 1 class models
     return [rawScores.max(1), rawScores.argMax(1)];
   }); // get max scores and classes index
-
+ 
   const nms = await tf.image.nonMaxSuppressionAsync(boxes, scores, 500, 0.45, 0.2); // NMS to filter boxes
-
+ 
   const boxes_data = boxes.gather(nms, 0).dataSync(); // indexing boxes by nms index
   const scores_data = scores.gather(nms, 0).dataSync(); // indexing scores by nms index
   const classes_data = classes.gather(nms, 0).dataSync(); // indexing classes by nms index
-
   renderBoxes(canvasRef, boxes_data, scores_data, classes_data, [xRatio, yRatio]); // render boxes
+
+  console.log(classes_data);
   tf.dispose([res, transRes, boxes, scores, classes, nms]); // clear memory
 
-  callback();
+
+  callback(classes_data);
 
   tf.engine().endScope(); // end of scoping
-};
-
-/**
- * Function to detect video from every source.
- * @param {HTMLVideoElement} vidSource video source
- * @param {tf.GraphModel} model loaded YOLOv8 tensorflow.js model
- * @param {HTMLCanvasElement} canvasRef canvas reference
- */
-export const detectVideo = (vidSource, model, canvasRef) => {
-  /**
-   * Function to detect every frame from video
-   */
-  const detectFrame = async () => {
-    if (vidSource.videoWidth === 0 && vidSource.srcObject === null) {
-      const ctx = canvasRef.getContext("2d");
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height); // clean canvas
-      return; // handle if source is closed
-    }
-
-    detect(vidSource, model, canvasRef, () => {
-      requestAnimationFrame(detectFrame); // get another frame
-    });
-  };
-
-  detectFrame(); // initialize to detect every frame
 };
